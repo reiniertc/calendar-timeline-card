@@ -1,7 +1,9 @@
+// calendar-timeline-card.js met offset-ondersteuning
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
       days: 1,
+      offset: 0,
       start_hour: 7,
       end_hour: 20,
       pixel_per_minute: 1,
@@ -26,6 +28,7 @@ class CalendarTimelineCard extends HTMLElement {
     const events = [];
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    start.setDate(start.getDate() + (this.config.offset || 0));
     const end = new Date(start);
     end.setDate(end.getDate() + this.config.days);
 
@@ -148,7 +151,7 @@ class CalendarTimelineCard extends HTMLElement {
 
     for (let d = 0; d < this.config.days; d++) {
       const date = new Date();
-      date.setDate(date.getDate() + d);
+      date.setDate(date.getDate() + d + (this.config.offset || 0));
       const dateStr = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
       this.config.calendars.forEach(cal => {
