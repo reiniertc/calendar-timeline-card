@@ -199,19 +199,35 @@ class CalendarTimelineCard extends HTMLElement {
   getCardSize() {
     return 12;
   }
-}
-
-  getCardSize() {
-    return 12;
-  }
 
   static async getConfigElement() {
     await import('./calendar-timeline-card-editor.js');
     return document.createElement('calendar-timeline-card-editor');
   }
-}
 
-customElements.define('calendar-timeline-card', CalendarTimelineCard);
+  static getStubConfig() {
+    return {
+      days: 1,
+      start_hour: 8,
+      end_hour: 22,
+      pixel_per_minute: 1,
+      font_size: 1.0,
+      border_width: 1,
+      border_radius: 4,
+      show_date: true,
+      show_names: true,
+      show_start_time: true,
+      show_end_time: false,
+      calendars: [
+        {
+          name: 'Demo',
+          color: '#81c784',
+          prefix: 'sensor.ical_demo_event_'
+        }
+      ]
+    };
+  }
+}
 
 customElements.define('calendar-timeline-card', CalendarTimelineCard);
 
