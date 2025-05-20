@@ -1,6 +1,6 @@
 {
   "name": "Calendar Timeline Card",
-  "content_in_root": false,
+  "content_in_root": true,
   "filename": "calendar-timeline-card.js",
   "type": "lovelace",
   "render_readme": true
