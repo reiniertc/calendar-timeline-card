@@ -1,4 +1,4 @@
-// calendar-timeline-card.js (met iCal ondersteuning)
+// calendar-timeline-card.js met ical-sensor ondersteuning
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -13,78 +13,44 @@ class CalendarTimelineCard extends HTMLElement {
     };
   }
 
-  connectedCallback() {
+  set hass(hass) {
+    this._hass = hass;
     this.fetchAndRender();
   }
 
-  async fetchAndRender() {
+  fetchAndRender() {
     const events = [];
-    const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const end = new Date(start);
     end.setDate(end.getDate() + this.config.days);
 
-    for (const cal of this.config.calendars) {
-      try {
-        const url = cal.url.replace('webcal://', 'https://');
-        const res = await fetch(url);
-        const text = await res.text();
-        const parsed = this.parseICal(text);
-        parsed.forEach(ev => {
-          const evStart = new Date(ev.start);
-          const evEnd = new Date(ev.end);
-          if (evEnd < start || evStart > end) return;
+    this.config.calendars.forEach((cal, index) => {
+      const prefix = cal.prefix || '';
+      Object.keys(this._hass.states).forEach(id => {
+        if (prefix && id.startsWith(prefix)) {
+          const state = this._hass.states[id];
+          const attrs = state.attributes;
+          if (!attrs.start || !attrs.end) return;
 
-          const dayOffset = Math.floor((evStart - start) / (24 * 60 * 60 * 1000));
+          const startDate = new Date(attrs.start);
+          const endDate = new Date(attrs.end);
+          if (endDate < start || startDate > end) return;
+
+          const dayOffset = Math.floor((startDate - start) / (24 * 60 * 60 * 1000));
           events.push({
             name: cal.name,
             dayOffset,
-            startMinutes: evStart.getHours() * 60 + evStart.getMinutes(),
-            endMinutes: evEnd.getHours() * 60 + evEnd.getMinutes(),
-            title: ev.summary
+            startMinutes: startDate.getHours() * 60 + startDate.getMinutes(),
+            endMinutes: endDate.getHours() * 60 + endDate.getMinutes(),
+            title: attrs.message || id,
+            color: cal.color || '#b3d1ff'
           });
-        });
-      } catch (err) {
-        console.error('Fout bij ophalen/parsen iCal feed:', cal.url, err);
-      }
-    }
+        }
+      });
+    });
 
     this.render(events);
-  }
-
-  parseICal(data) {
-    const events = [];
-    const lines = data.split(/\r?\n/);
-    let event = null;
-    lines.forEach(line => {
-      if (line === 'BEGIN:VEVENT') {
-        event = {};
-      } else if (line === 'END:VEVENT') {
-        if (event?.start && event?.end && event?.summary) events.push(event);
-        event = null;
-      } else if (event) {
-        if (line.startsWith('DTSTART')) {
-          const dt = line.split(':')[1];
-          event.start = this.parseICalDate(dt);
-        } else if (line.startsWith('DTEND')) {
-          const dt = line.split(':')[1];
-          event.end = this.parseICalDate(dt);
-        } else if (line.startsWith('SUMMARY')) {
-          event.summary = line.split(':').slice(1).join(':');
-        }
-      }
-    });
-    return events;
-  }
-
-  parseICalDate(dt) {
-    // werkt voor formaat: 20250520T130000Z of 20250520T130000
-    const year = parseInt(dt.slice(0, 4));
-    const month = parseInt(dt.slice(4, 6)) - 1;
-    const day = parseInt(dt.slice(6, 8));
-    const hour = parseInt(dt.slice(9, 11));
-    const minute = parseInt(dt.slice(11, 13));
-    return new Date(Date.UTC(year, month, day, hour, minute));
   }
 
   render(events = []) {
@@ -147,7 +113,6 @@ class CalendarTimelineCard extends HTMLElement {
         text-overflow: ellipsis;
         white-space: nowrap;
         color: black;
-        background-color: #b3d1ff;
       }
     `;
     shadow.appendChild(style);
@@ -200,6 +165,7 @@ class CalendarTimelineCard extends HTMLElement {
       event.className = 'event';
       event.style.top = `${(ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
       event.style.height = `${(ev.endMinutes - ev.startMinutes) * this.config.pixel_per_minute}px`;
+      event.style.backgroundColor = ev.color;
       event.textContent = ev.title;
 
       const col = grid.querySelectorAll('.calendar-block .column')[colIndex];
@@ -220,6 +186,6 @@ customElements.define('calendar-timeline-card', CalendarTimelineCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'calendar-timeline-card',
-  name: 'Calendar Timeline Card (iCal)',
-  description: 'Toont iCal agenda’s in tijdlijnweergave met pixelprecisie.'
+  name: 'Calendar Timeline Card (ical-sensor)',
+  description: 'Toont afspraken uit ical-sensor entiteiten als tijdlijn.'
 });
