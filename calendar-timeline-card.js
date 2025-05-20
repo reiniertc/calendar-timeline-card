@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met ical-sensor ondersteuning
+// calendar-timeline-card.js met ical-sensor ondersteuning + titel en tijd
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -8,6 +8,8 @@ class CalendarTimelineCard extends HTMLElement {
       pixel_per_minute: 1,
       show_date: true,
       show_names: true,
+      show_start_time: true,
+      show_end_time: false,
       calendars: [],
       ...config,
     };
@@ -44,13 +46,19 @@ class CalendarTimelineCard extends HTMLElement {
             startMinutes: startDate.getHours() * 60 + startDate.getMinutes(),
             endMinutes: endDate.getHours() * 60 + endDate.getMinutes(),
             title: attrs.message || id,
-            color: cal.color || '#b3d1ff'
+            color: cal.color || '#b3d1ff',
+            startTime: startDate,
+            endTime: endDate
           });
         }
       });
     });
 
     this.render(events);
+  }
+
+  formatTime(date) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   render(events = []) {
@@ -107,12 +115,14 @@ class CalendarTimelineCard extends HTMLElement {
         left: 2px;
         right: 2px;
         font-size: 11px;
-        padding: 2px;
-        border-radius: 3px;
+        padding: 4px;
+        border-radius: 4px;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
+        white-space: normal;
         color: black;
+        background-color: #b3d1ff;
+        line-height: 1.2;
       }
     `;
     shadow.appendChild(style);
@@ -166,7 +176,12 @@ class CalendarTimelineCard extends HTMLElement {
       event.style.top = `${(ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
       event.style.height = `${(ev.endMinutes - ev.startMinutes) * this.config.pixel_per_minute}px`;
       event.style.backgroundColor = ev.color;
-      event.textContent = ev.title;
+
+      const start = this.config.show_start_time ? this.formatTime(ev.startTime) : '';
+      const end = this.config.show_end_time ? this.formatTime(ev.endTime) : '';
+      const timeRange = [start, end].filter(Boolean).join(' – ');
+
+      event.innerHTML = `<div>${ev.title}</div>${timeRange ? `<div><small>${timeRange}</small></div>` : ''}`;
 
       const col = grid.querySelectorAll('.calendar-block .column')[colIndex];
       if (col) col.appendChild(event);
