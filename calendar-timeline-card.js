@@ -201,6 +201,18 @@ class CalendarTimelineCard extends HTMLElement {
   }
 }
 
+  getCardSize() {
+    return 12;
+  }
+
+  static async getConfigElement() {
+    await import('./calendar-timeline-card-editor.js');
+    return document.createElement('calendar-timeline-card-editor');
+  }
+}
+
+customElements.define('calendar-timeline-card', CalendarTimelineCard);
+
 customElements.define('calendar-timeline-card', CalendarTimelineCard);
 
 window.customCards = window.customCards || [];
