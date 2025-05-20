@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met themavriendelijke kleuren en fonts
+// calendar-timeline-card.js met optie voor fontsize van de uren
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -8,6 +8,7 @@ class CalendarTimelineCard extends HTMLElement {
       end_hour: 20,
       pixel_per_minute: 1,
       font_size: 1.0,
+      hour_font_size: '12px',
       border_width: 0,
       border_radius: 4,
       show_date: true,
@@ -87,7 +88,7 @@ class CalendarTimelineCard extends HTMLElement {
         width: 60px;
         padding-right: 5px;
         text-align: right;
-        font-size: var(--body-font-size, 12px);
+        font-size: ${this.config.hour_font_size};
         color: var(--secondary-text-color);
         position: relative;
       }
