@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met offset-ondersteuning
+// calendar-timeline-card.js met border_color en show_hour_lines
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -14,6 +14,7 @@ class CalendarTimelineCard extends HTMLElement {
       show_names: true,
       show_start_time: true,
       show_end_time: false,
+      show_hour_lines: false,
       calendars: [],
       ...config,
     };
@@ -52,6 +53,7 @@ class CalendarTimelineCard extends HTMLElement {
             endMinutes: endDate.getHours() * 60 + endDate.getMinutes(),
             title: attrs.summary || attrs.message || id,
             color: cal.color || '#b3d1ff',
+            borderColor: cal.border_color || 'rgba(0,0,0,0.3)',
             startTime: startDate,
             endTime: endDate
           });
@@ -85,6 +87,7 @@ class CalendarTimelineCard extends HTMLElement {
         padding-right: 5px;
         text-align: right;
         font-size: 12px;
+        position: relative;
       }
       .time-column div {
         height: ${60 * this.config.pixel_per_minute}px;
@@ -114,6 +117,13 @@ class CalendarTimelineCard extends HTMLElement {
         position: relative;
         height: ${60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px;
       }
+      .hour-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        border-top: 1px dashed #ccc;
+        pointer-events: none;
+      }
       .event {
         position: absolute;
         left: 2px;
@@ -121,7 +131,8 @@ class CalendarTimelineCard extends HTMLElement {
         font-size: ${this.config.font_size}em;
         padding: 4px;
         border-radius: ${this.config.border_radius}px;
-        border: ${this.config.border_width}px solid rgba(0, 0, 0, 0.3);
+        border-width: ${this.config.border_width}px;
+        border-style: solid;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: normal;
@@ -168,8 +179,17 @@ class CalendarTimelineCard extends HTMLElement {
 
         const column = document.createElement('div');
         column.className = 'column';
-        block.appendChild(column);
 
+        if (this.config.show_hour_lines) {
+          for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
+            const line = document.createElement('div');
+            line.className = 'hour-line';
+            line.style.top = `${(h - this.config.start_hour) * 60 * this.config.pixel_per_minute}px`;
+            column.appendChild(line);
+          }
+        }
+
+        block.appendChild(column);
         grid.appendChild(block);
       });
     }
@@ -184,6 +204,7 @@ class CalendarTimelineCard extends HTMLElement {
       event.style.top = `${(ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
       event.style.height = `${(ev.endMinutes - ev.startMinutes) * this.config.pixel_per_minute}px`;
       event.style.backgroundColor = ev.color;
+      event.style.borderColor = ev.borderColor;
 
       const start = this.config.show_start_time ? this.formatTime(ev.startTime) : '';
       const end = this.config.show_end_time ? this.formatTime(ev.endTime) : '';
