@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met ical-sensor ondersteuning + titel en tijd
+// calendar-timeline-card.js met summary-ondersteuning en font-size optie
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -6,6 +6,7 @@ class CalendarTimelineCard extends HTMLElement {
       start_hour: 7,
       end_hour: 20,
       pixel_per_minute: 1,
+      font_size: 1.0,
       show_date: true,
       show_names: true,
       show_start_time: true,
@@ -45,7 +46,7 @@ class CalendarTimelineCard extends HTMLElement {
             dayOffset,
             startMinutes: startDate.getHours() * 60 + startDate.getMinutes(),
             endMinutes: endDate.getHours() * 60 + endDate.getMinutes(),
-            title: attrs.message || id,
+            title: attrs.summary || attrs.message || id,
             color: cal.color || '#b3d1ff',
             startTime: startDate,
             endTime: endDate
@@ -114,7 +115,7 @@ class CalendarTimelineCard extends HTMLElement {
         position: absolute;
         left: 2px;
         right: 2px;
-        font-size: 11px;
+        font-size: ${this.config.font_size}em;
         padding: 4px;
         border-radius: 4px;
         overflow: hidden;
