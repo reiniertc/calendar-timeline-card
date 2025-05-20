@@ -1,135 +1,211 @@
-// calendar-timeline-card-editor.js met dynamisch agenda beheer
-class CalendarTimelineCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this._config = {};
-    this.attachShadow({ mode: 'open' });
-  }
-
+class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
-    this._config = config;
-    this.render();
+    this.config = {
+      days: 1,
+      start_hour: 7,
+      end_hour: 20,
+      pixel_per_minute: 1,
+      font_size: 1.0,
+      border_width: 0,
+      border_radius: 4,
+      show_date: true,
+      show_names: true,
+      show_start_time: true,
+      show_end_time: false,
+      calendars: [],
+      ...config,
+    };
   }
 
-  getConfig() {
-    return this._config;
+  set hass(hass) {
+    this._hass = hass;
+    this.fetchAndRender();
   }
 
-  render() {
-    if (!this.shadowRoot) return;
-    this.shadowRoot.innerHTML = '';
+  fetchAndRender() {
+    const events = [];
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(start);
+    end.setDate(end.getDate() + this.config.days);
+
+    this.config.calendars.forEach(cal => {
+      const prefix = cal.prefix || '';
+      Object.keys(this._hass.states).forEach(id => {
+        if (id.startsWith(prefix)) {
+          const state = this._hass.states[id];
+          const attrs = state.attributes;
+          if (!attrs.start || !attrs.end) return;
+
+          const startDate = new Date(attrs.start);
+          const endDate = new Date(attrs.end);
+          if (endDate < start || startDate > end) return;
+
+          const dayOffset = Math.floor((startDate - start) / (24 * 60 * 60 * 1000));
+          events.push({
+            name: cal.name,
+            dayOffset,
+            startMinutes: startDate.getHours() * 60 + startDate.getMinutes(),
+            endMinutes: endDate.getHours() * 60 + endDate.getMinutes(),
+            title: attrs.summary || attrs.message || id,
+            color: cal.color || '#b3d1ff',
+            startTime: startDate,
+            endTime: endDate
+          });
+        }
+      });
+    });
+
+    this.render(events);
+  }
+
+  formatTime(date) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  render(events = []) {
+    const shadow = this.shadowRoot || this.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '';
 
     const style = document.createElement('style');
     style.textContent = `
-      .card {
-        padding: 16px;
+      :host {
+        all: initial;
+        font-family: var(--primary-font-family, sans-serif);
       }
-      .calendar {
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        margin-bottom: 12px;
-        padding: 8px;
-      }
-      .calendar h4 {
-        margin: 0 0 8px;
-      }
-      .inline {
+      .container {
         display: flex;
-        gap: 8px;
-        margin-bottom: 8px;
+        margin-top: 30px;
       }
-      .inline > * {
+      .time-column {
+        width: 60px;
+        padding-right: 5px;
+        text-align: right;
+        font-size: 12px;
+      }
+      .time-column div {
+        height: ${60 * this.config.pixel_per_minute}px;
+      }
+      .calendars {
         flex: 1;
+        display: flex;
+        gap: 4px;
       }
-      button {
-        margin-top: 8px;
+      .calendar-block {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid #ccc;
+      }
+      .column-header {
+        text-align: center;
+        font-size: 12px;
+        font-weight: bold;
+        height: 30px;
+        line-height: 30px;
+        background: var(--card-background-color);
+        border-bottom: 1px solid #ccc;
+        margin-bottom: 4px;
+      }
+      .column {
+        position: relative;
+        height: ${60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px;
+      }
+      .event {
+        position: absolute;
+        left: 2px;
+        right: 2px;
+        font-size: ${this.config.font_size}em;
+        padding: 4px;
+        border-radius: ${this.config.border_radius}px;
+        border: ${this.config.border_width}px solid rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: normal;
+        color: black;
+        background-color: #b3d1ff;
+        line-height: 1.2;
+        background-clip: padding-box;
+        box-sizing: border-box;
       }
     `;
-    this.shadowRoot.appendChild(style);
+    shadow.appendChild(style);
 
-    const card = document.createElement('div');
-    card.className = 'card';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'container';
 
-    const general = document.createElement('div');
-    general.innerHTML = `
-      <div class="inline">
-        <label>Dagen: <input type="number" name="days" value="${this._config.days || 1}"></label>
-        <label>Start uur: <input type="number" name="start_hour" value="${this._config.start_hour || 7}"></label>
-        <label>Eind uur: <input type="number" name="end_hour" value="${this._config.end_hour || 22}"></label>
-      </div>
-      <div class="inline">
-        <label>Pixels/min: <input type="number" name="pixel_per_minute" value="${this._config.pixel_per_minute || 1}" step="0.1"></label>
-        <label>Lettergrootte: <input type="number" name="font_size" value="${this._config.font_size || 1}" step="0.1"></label>
-        <label>Rand (px): <input type="number" name="border_width" value="${this._config.border_width || 0}"></label>
-        <label>Hoek (px): <input type="number" name="border_radius" value="${this._config.border_radius || 4}"></label>
-      </div>
-      <div>
-        <label><input type="checkbox" name="show_date" ${this._config.show_date ? 'checked' : ''}> Toon datum</label>
-        <label><input type="checkbox" name="show_names" ${this._config.show_names ? 'checked' : ''}> Toon naam</label>
-        <label><input type="checkbox" name="show_start_time" ${this._config.show_start_time ? 'checked' : ''}> Toon starttijd</label>
-        <label><input type="checkbox" name="show_end_time" ${this._config.show_end_time ? 'checked' : ''}> Toon eindtijd</label>
-      </div>
-    `;
-    card.appendChild(general);
+    const timeColumn = document.createElement('div');
+    timeColumn.className = 'time-column';
+    for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
+      const d = document.createElement('div');
+      d.textContent = `${h}:00`;
+      timeColumn.appendChild(d);
+    }
+    wrapper.appendChild(timeColumn);
 
-    const calendars = this._config.calendars || [];
+    const grid = document.createElement('div');
+    grid.className = 'calendars';
 
-    calendars.forEach((cal, index) => {
-      const calDiv = document.createElement('div');
-      calDiv.className = 'calendar';
-      calDiv.innerHTML = `
-        <h4>Agenda ${index + 1}</h4>
-        <div class="inline">
-          <label>Naam: <input type="text" name="name" value="${cal.name || ''}" data-index="${index}" data-field="name"></label>
-          <label>Kleur: <input type="color" name="color" value="${cal.color || '#81c784'}" data-index="${index}" data-field="color"></label>
-        </div>
-        <label>Prefix: <input type="text" name="prefix" value="${cal.prefix || ''}" data-index="${index}" data-field="prefix"></label>
-        <button type="button" data-remove="${index}">Verwijder</button>
-      `;
-      card.appendChild(calDiv);
-    });
+    for (let d = 0; d < this.config.days; d++) {
+      const date = new Date();
+      date.setDate(date.getDate() + d);
+      const dateStr = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.textContent = '➕ Agenda toevoegen';
-    addBtn.addEventListener('click', () => {
-      this._config.calendars = [...(this._config.calendars || []), { name: '', color: '#81c784', prefix: '' }];
-      this._fireChange();
-      this.render();
-    });
-    card.appendChild(addBtn);
+      this.config.calendars.forEach(cal => {
+        const block = document.createElement('div');
+        block.className = 'calendar-block';
 
-    card.querySelectorAll('input').forEach(input => {
-      input.addEventListener('input', ev => {
-        const el = ev.target;
-        if (el.dataset.index !== undefined) {
-          const i = parseInt(el.dataset.index);
-          const field = el.dataset.field;
-          this._config.calendars[i][field] = el.value;
-        } else {
-          const name = el.name;
-          const value = el.type === 'checkbox' ? el.checked : el.value;
-          this._config[name] = isNaN(value) || name.startsWith('show') ? value : parseFloat(value);
-        }
-        this._fireChange();
+        const header = document.createElement('div');
+        header.className = 'column-header';
+        header.textContent = [
+          this.config.show_date ? dateStr : '',
+          this.config.show_names ? (cal.name || '') : ''
+        ].filter(Boolean).join(' — ');
+        block.appendChild(header);
+
+        const column = document.createElement('div');
+        column.className = 'column';
+        block.appendChild(column);
+
+        grid.appendChild(block);
       });
+    }
+
+    events.forEach(ev => {
+      const colIndex = ev.dayOffset * this.config.calendars.length +
+        this.config.calendars.findIndex(c => c.name === ev.name);
+      if (colIndex < 0) return;
+
+      const event = document.createElement('div');
+      event.className = 'event';
+      event.style.top = `${(ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
+      event.style.height = `${(ev.endMinutes - ev.startMinutes) * this.config.pixel_per_minute}px`;
+      event.style.backgroundColor = ev.color;
+
+      const start = this.config.show_start_time ? this.formatTime(ev.startTime) : '';
+      const end = this.config.show_end_time ? this.formatTime(ev.endTime) : '';
+      const timeRange = [start, end].filter(Boolean).join(' – ');
+
+      event.innerHTML = `<div>${ev.title}</div>${timeRange ? `<div><small>${timeRange}</small></div>` : ''}`;
+
+      const col = grid.querySelectorAll('.calendar-block .column')[colIndex];
+      if (col) col.appendChild(event);
     });
 
-    card.querySelectorAll('button[data-remove]').forEach(btn => {
-      btn.addEventListener('click', ev => {
-        const idx = parseInt(ev.target.dataset.remove);
-        this._config.calendars.splice(idx, 1);
-        this._fireChange();
-        this.render();
-      });
-    });
-
-    this.shadowRoot.appendChild(card);
+    wrapper.appendChild(grid);
+    shadow.appendChild(wrapper);
   }
 
-  _fireChange() {
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config } }));
+  getCardSize() {
+    return 12;
   }
 }
 
-customElements.define('calendar-timeline-card-editor', CalendarTimelineCardEditor);
+customElements.define('calendar-timeline-card', CalendarTimelineCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'calendar-timeline-card',
+  name: 'Calendar Timeline Card (ical-sensor)',
+  description: 'Toont afspraken uit ical-sensor entiteiten als tijdlijn.'
+});
