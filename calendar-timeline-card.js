@@ -19,7 +19,7 @@ class CalendarTimelineCard extends HTMLElement {
   }
 
   async fetchAndRender() {
-    if (!this.hass) return;
+    if (!this._hass) return;
     const events = [];
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -30,7 +30,7 @@ class CalendarTimelineCard extends HTMLElement {
     for (const cal of this.config.calendars) {
       const entityId = cal.entity;
       try {
-        const result = await this.hass.callApi(
+        const result = await this._hass.callApi(
           'GET',
           `calendars/${entityId}?start=${start.toISOString()}&end=${end.toISOString()}`
         );
@@ -174,7 +174,7 @@ class CalendarTimelineCard extends HTMLElement {
   }
 
   set hass(hass) {
-    this.hass = hass;
+    this._hass = hass;
     this.fetchAndRender();
   }
 
