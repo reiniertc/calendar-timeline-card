@@ -4,7 +4,7 @@ class CalendarTimelineCard extends HTMLElement {
     this.config = {
       days: 1,
       start_hour: 7,
-      end_hour: 20,
+      end_hour: 20,x
       calendars: [],
       ...config,
     };
