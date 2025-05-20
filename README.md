@@ -1,77 +1,74 @@
-# Calendar Timeline Card
+# 📅 Calendar Timeline Card
 
-A custom Home Assistant Lovelace card that displays one or more calendars as vertical timelines, inspired by the Apple Calendar layout.
+A custom Home Assistant Lovelace card that displays one or more calendars as pixel-accurate vertical timelines — inspired by Apple Calendar.
 
-This version is designed to work with ical-sensor, which reads ICS/iCal feeds and creates event sensors in Home Assistant.
+---
 
-⸻
+## ✅ Features
 
-Features
-	•	Visual timeline layout per calendar, with time on the left
-	•	Supports multiple calendars shown side-by-side
-	•	Per-day vertical scrolling layout
-	•	Pixel-precise placement of events based on time
-	•	Customizable:
-	•	Font size
-	•	Border thickness
-	•	Border radius
-	•	Background color per calendar
-	•	Start and end hours of the day
-	•	Number of days shown
-	•	Optionally show calendar name and date
-	•	Optionally show start and/or end times
+- Multiple calendars shown side by side
+- Each day divided by hours with pixel precision
+- Uses `ical-sensor` entities for data
+- Full GUI editor (via `ha-form`)
+- Theme-aware (colors, fonts)
+- Support for:
+  - Offset (`offset`) to skip days
+  - Adjustable `start_hour` and `end_hour`
+  - Font size and border radius
+  - Per-calendar color and border color
+  - Optional dashed hour lines (`show_hour_lines`)
+  - Adjustable font size for hour labels (`hour_font_size`)
 
-⸻
+---
 
-Dependencies
+## 📦 Installation (via HACS)
 
-This card requires the use of ical-sensor, an integration that creates sensor.ical_xxx_event_0, sensor.ical_xxx_event_1, etc. per iCal feed.
+1. Go to **HACS > Frontend > Custom Repositories**
+2. Add the GitHub repo URL and select type: **Lovelace**
+3. After installation, refresh your browser
+4. Add the card via the Lovelace UI
 
-Make sure your sensors contain start, end, and summary attributes.
+---
 
-⸻
+## ⚙️ YAML Configuration Example
 
-Example Configuration
-
+```yaml
 type: custom:calendar-timeline-card
+title: Agenda Tijdlijn
 days: 2
+offset: 1
 start_hour: 7
 end_hour: 22
 pixel_per_minute: 1
-font_size: 1.1
+font_size: 1.0
+hour_font_size: 14px
 border_width: 1
 border_radius: 6
 show_date: true
 show_names: true
 show_start_time: true
 show_end_time: true
+show_hour_lines: true
 calendars:
-  - name: Henk
-    color: '#81c784'
-    prefix: sensor.ical_henk_event_
-  - name: Marie
+  - name: Mats
+    color: 'var(--accent-color)'
+    border_color: 'var(--primary-color)'
+    prefix: sensor.ical_mats_event_
+  - name: Roemer
     color: '#64b5f6'
-    prefix: sensor.marie_event_
+    border_color: '#1976d2'
+    prefix: sensor.ical_roemer_event_
+```
 
-Explanation
-	•	prefix: is used to collect all matching sensor.xxx entries
-	•	Events are included if their start/end falls within the configured days
+---
 
-⸻
+## ⚠️ Requirements
 
-Installation
-	1.	Save calendar-timeline-card.js in /config/www/
-	2.	Add this to your Lovelace resources:
+You need to use the [`ical-sensor`](https://github.com/ehendrix23/ical-sensor) integration to read iCal/WebCal feeds as entities.
 
-url: /local/calendar-timeline-card.js
-type: module
+---
 
+## ℹ️ Notes
 
-	3.	Add the example configuration to your dashboard
-	4.	Clear browser cache if necessary (Ctrl+F5)
-
-⸻
-
-Disclaimer
-
-This card was created with the assistance of ChatGPT (OpenAI) and customized by the user. It is provided as-is. Use at your own risk. Contributions and improvements are welcome!
+- Card is fully compatible with Home Assistant themes
+- Created and maintained with help from ChatGPT
