@@ -117,3 +117,43 @@ class CalendarTimelineCard extends HTMLElement {
         dayOffset: 1,
         start: 8,
         end: 9,
+        title: 'Sporten'
+      },
+    ];
+
+    dummyEvents.forEach(ev => {
+      const colIndex = this.config.calendars.findIndex(c => c.entity === ev.entity);
+      if (colIndex === -1) return;
+      const calendarConfig = this.config.calendars[colIndex];
+
+      const eventEl = document.createElement('div');
+      eventEl.className = 'event';
+      const baseColumn = ev.dayOffset * this.config.calendars.length + colIndex;
+      eventEl.style.gridColumn = (baseColumn + 2).toString();
+      eventEl.style.gridRow = `${ev.start - this.config.start_hour + 2} / ${ev.end - this.config.start_hour + 2}`;
+      eventEl.style.backgroundColor = calendarConfig?.color || '#b3d1ff';
+      eventEl.textContent = ev.title;
+      container.appendChild(eventEl);
+    });
+
+    shadow.appendChild(container);
+  }
+
+  set hass(hass) {
+    // Placeholder: in de toekomst echte kalenderdata ophalen
+  }
+
+  getCardSize() {
+    return 12;
+  }
+}
+
+customElements.define('calendar-timeline-card', CalendarTimelineCard);
+
+// Voor Home Assistant
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'calendar-timeline-card',
+  name: 'Calendar Timeline Card',
+  description: 'Toont meerdere agenda’s in tijdlijn-dagweergave met meerdere dagen, kleuren en sticky tijdskolom'
+});
