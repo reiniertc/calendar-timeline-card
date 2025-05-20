@@ -5,6 +5,7 @@ class CalendarTimelineCard extends HTMLElement {
       days: 1,
       start_hour: 7,
       end_hour: 20,
+      calendars: [],
       ...config,
     };
     this.innerHTML = '';
@@ -19,22 +20,26 @@ class CalendarTimelineCard extends HTMLElement {
     style.textContent = `
       .timeline {
         display: grid;
-        grid-template-columns: 60px repeat(${this.config.entities.length * this.config.days}, 1fr);
+        grid-template-columns: 80px repeat(${this.config.calendars.length * this.config.days}, 1fr);
         grid-auto-rows: 40px;
         font-family: sans-serif;
       }
       .time {
         text-align: right;
-        padding-right: 5px;
+        padding-right: 8px;
         border-bottom: 1px solid #ddd;
         font-size: 12px;
+        background: #fff;
+        position: sticky;
+        left: 0;
+        z-index: 2;
       }
       .event {
         border: 1px solid #999;
-        background-color: #b3d1ff;
         margin: 2px;
         padding: 2px;
         font-size: 12px;
+        color: #000;
       }
       .column {
         border-left: 1px solid #ccc;
@@ -60,7 +65,7 @@ class CalendarTimelineCard extends HTMLElement {
       dayLabel.setDate(dayLabel.getDate() + d);
       const dateString = dayLabel.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
-      this.config.entities.forEach((_, idx) => {
+      this.config.calendars.forEach((cal, idx) => {
         const header = document.createElement('div');
         header.className = 'header';
         header.textContent = `${dateString} (${idx + 1})`;
@@ -68,7 +73,7 @@ class CalendarTimelineCard extends HTMLElement {
       });
     }
 
-    // Tijden start_hour - end_hour
+    // Tijdslijn
     for (let i = this.config.start_hour; i <= this.config.end_hour; i++) {
       const timeLabel = document.createElement('div');
       timeLabel.className = 'time';
@@ -76,7 +81,7 @@ class CalendarTimelineCard extends HTMLElement {
       container.appendChild(timeLabel);
 
       for (let d = 0; d < this.config.days; d++) {
-        for (let col = 0; col < this.config.entities.length; col++) {
+        for (let col = 0; col < this.config.calendars.length; col++) {
           const slot = document.createElement('div');
           slot.className = 'column';
           container.appendChild(slot);
@@ -119,9 +124,10 @@ class CalendarTimelineCard extends HTMLElement {
     dummyEvents.forEach(ev => {
       const eventEl = document.createElement('div');
       eventEl.className = 'event';
-      const baseColumn = ev.dayOffset * this.config.entities.length + ev.entity;
+      const baseColumn = ev.dayOffset * this.config.calendars.length + ev.entity;
       eventEl.style.gridColumn = (baseColumn + 2).toString();
-      eventEl.style.gridRow = `${ev.start - this.config.start_hour + 1} / ${ev.end - this.config.start_hour + 1}`;
+      eventEl.style.gridRow = `${ev.start - this.config.start_hour + 2} / ${ev.end - this.config.start_hour + 2}`;
+      eventEl.style.backgroundColor = this.config.calendars[ev.entity].color || '#b3d1ff';
       eventEl.textContent = ev.title;
       container.appendChild(eventEl);
     });
@@ -145,5 +151,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'calendar-timeline-card',
   name: 'Calendar Timeline Card',
-  description: 'Toont meerdere agenda’s in tijdlijn-dagweergave met meerdere dagen en kolommen'
+  description: 'Toont meerdere agenda’s in tijdlijn-dagweergave met meerdere dagen, kleuren en sticky tijdskolom'
 });
