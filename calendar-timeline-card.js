@@ -5,157 +5,177 @@ class CalendarTimelineCard extends HTMLElement {
       days: 1,
       start_hour: 7,
       end_hour: 20,
+      pixel_per_minute: 1,
+      show_date: true,
+      show_names: true,
       calendars: [],
       ...config,
     };
   }
 
   connectedCallback() {
-    this.render();
+    this.style.display = 'block';
+    this.fetchAndRender();
+  }
+
+  async fetchAndRender() {
+    if (!this.hass) return;
+    const events = [];
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const start = new Date(today);
+    const end = new Date(today);
+    end.setDate(end.getDate() + this.config.days);
+
+    for (const cal of this.config.calendars) {
+      const entityId = cal.entity;
+      try {
+        const result = await this.hass.callApi(
+          'GET',
+          `calendars/${entityId}?start=${start.toISOString()}&end=${end.toISOString()}`
+        );
+        result.forEach(evt => {
+          const evtStart = new Date(evt.start);
+          const evtEnd = new Date(evt.end);
+          const dayOffset = Math.floor((evtStart - start) / (24 * 60 * 60 * 1000));
+          events.push({
+            entity: entityId,
+            dayOffset,
+            startMinutes: evtStart.getHours() * 60 + evtStart.getMinutes(),
+            endMinutes: evtEnd.getHours() * 60 + evtEnd.getMinutes(),
+            title: evt.summary || evt.title || 'Afspraak'
+          });
+        });
+      } catch (err) {
+        console.error('Fout bij ophalen kalenderdata:', entityId, err);
+      }
+    }
+
+    this.render(events);
   }
 
   render(events = []) {
-    try {
-      const shadow = this.shadowRoot || this.attachShadow({ mode: 'open' });
-      shadow.innerHTML = '';
+    const shadow = this.shadowRoot || this.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '';
 
-      const style = document.createElement('style');
-      style.textContent = `
-        :host {
-          all: initial;
-        }
-        .timeline {
-          display: grid;
-          grid-template-columns: 80px repeat(${this.config.calendars.length * this.config.days}, 1fr);
-          grid-auto-rows: 40px;
-          font-family: var(--primary-font-family, sans-serif);
-          background: var(--card-background-color, #fff);
-        }
-        .timeline > div {
-          box-sizing: border-box;
-          height: 40px;
-          display: flex;
-          align-items: center;
-        }
-        .time {
-          text-align: right;
-          padding-right: 8px;
-          border-bottom: 1px solid #ddd;
-          font-size: 12px;
-          background: var(--card-background-color, #fff);
-          position: sticky;
-          left: 0;
-          z-index: 2;
-          height: 40px;
-          line-height: 40px;
-        }
-        .event {
-          border: 1px solid #999;
-          margin: 2px;
-          padding: 4px;
-          font-size: 12px;
-          color: #000;
-          display: flex;
-          align-items: center;
-          background-color: #b3d1ff;
-        }
-        .column {
-          border-left: 1px solid #ccc;
-          height: 40px;
-        }
-        .header {
-          font-weight: bold;
-          font-size: 12px;
-          text-align: center;
-          border-bottom: 1px solid #ccc;
-          background: var(--card-background-color, #fff);
-          position: sticky;
-          top: 0;
-          z-index: 3;
-        }
-      `;
-      shadow.appendChild(style);
-
-      const container = document.createElement('div');
-      container.className = 'timeline';
-
-      const headerSpacer = document.createElement('div');
-      container.appendChild(headerSpacer);
-
-      for (let d = 0; d < this.config.days; d++) {
-        const dayLabel = new Date();
-        dayLabel.setDate(dayLabel.getDate() + d);
-        const dateString = dayLabel.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-
-        this.config.calendars.forEach((cal, idx) => {
-          const header = document.createElement('div');
-          header.className = 'header';
-          header.textContent = `${dateString} (${idx + 1})`;
-          container.appendChild(header);
-        });
+    const style = document.createElement('style');
+    style.textContent = `
+      :host {
+        all: initial;
+        font-family: var(--primary-font-family, sans-serif);
       }
-
-      for (let i = this.config.start_hour; i <= this.config.end_hour; i++) {
-        const timeLabel = document.createElement('div');
-        timeLabel.className = 'time';
-        timeLabel.textContent = `${i}:00`;
-        container.appendChild(timeLabel);
-
-        for (let d = 0; d < this.config.days; d++) {
-          for (let col = 0; col < this.config.calendars.length; col++) {
-            const slot = document.createElement('div');
-            slot.className = 'column';
-            container.appendChild(slot);
-          }
-        }
+      .container {
+        display: flex;
       }
+      .time-column {
+        width: 60px;
+        padding-right: 5px;
+        text-align: right;
+        font-size: 12px;
+      }
+      .time-column div {
+        height: ${60 * this.config.pixel_per_minute}px;
+      }
+      .calendars {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(${this.config.days * this.config.calendars.length}, 1fr);
+        position: relative;
+      }
+      .column-header {
+        text-align: center;
+        font-size: 12px;
+        font-weight: bold;
+        height: 30px;
+        line-height: 30px;
+        background: var(--card-background-color);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        border-bottom: 1px solid #ccc;
+      }
+      .column {
+        border-left: 1px solid #ccc;
+        position: relative;
+        height: ${60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px;
+      }
+      .event {
+        position: absolute;
+        left: 2px;
+        right: 2px;
+        font-size: 11px;
+        padding: 2px;
+        border-radius: 3px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: black;
+      }
+    `;
+    shadow.appendChild(style);
 
-      events.forEach(ev => {
-        const colIndex = this.config.calendars.findIndex(c => c.entity === ev.entity);
-        if (colIndex === -1) return;
-        const calendarConfig = this.config.calendars[colIndex];
-        const baseColumn = ev.dayOffset * this.config.calendars.length + colIndex;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'container';
 
-        const eventEl = document.createElement('div');
-        eventEl.className = 'event';
-        eventEl.style.gridColumn = (baseColumn + 2).toString();
-        eventEl.style.gridRow = `${ev.start - this.config.start_hour + 2} / ${ev.end - this.config.start_hour + 2}`;
-        eventEl.style.backgroundColor = calendarConfig?.color || '#b3d1ff';
-        eventEl.textContent = ev.title;
-        container.appendChild(eventEl);
-      });
-
-      shadow.appendChild(container);
-    } catch (err) {
-      console.error('Fout in render():', err);
-      this.innerHTML = `<div style="color: red; padding: 1em;">❌ Fout bij laden van kalenderkaart:<br>${err.message}</div>`;
+    // Tijd-as
+    const timeColumn = document.createElement('div');
+    timeColumn.className = 'time-column';
+    for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
+      const d = document.createElement('div');
+      d.textContent = `${h}:00`;
+      timeColumn.appendChild(d);
     }
+    wrapper.appendChild(timeColumn);
+
+    // Agenda-kolommen
+    const grid = document.createElement('div');
+    grid.className = 'calendars';
+
+    for (let d = 0; d < this.config.days; d++) {
+      const date = new Date();
+      date.setDate(date.getDate() + d);
+      const dateStr = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
+      this.config.calendars.forEach((cal, i) => {
+        const column = document.createElement('div');
+        column.className = 'column';
+
+        if (this.config.show_date || this.config.show_names) {
+          const header = document.createElement('div');
+          header.className = 'column-header';
+          header.textContent = [
+            this.config.show_date ? dateStr : '',
+            this.config.show_names ? (cal.name || cal.entity) : ''
+          ].filter(Boolean).join(' — ');
+          grid.appendChild(header);
+        }
+
+        grid.appendChild(column);
+      });
+    }
+
+    events.forEach(ev => {
+      const colIndex = ev.dayOffset * this.config.calendars.length + this.config.calendars.findIndex(c => c.entity === ev.entity);
+      if (colIndex < 0) return;
+
+      const event = document.createElement('div');
+      event.className = 'event';
+      event.style.top = `${(ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
+      event.style.height = `${(ev.endMinutes - ev.startMinutes) * this.config.pixel_per_minute}px`;
+      event.style.backgroundColor = this.config.calendars[colIndex % this.config.calendars.length]?.color || '#b3d1ff';
+      event.textContent = ev.title;
+
+      const col = grid.querySelectorAll('.column')[colIndex];
+      if (col) col.appendChild(event);
+    });
+
+    wrapper.appendChild(grid);
+    shadow.appendChild(wrapper);
   }
 
   set hass(hass) {
-    const events = [];
-    const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-
-    this.config.calendars.forEach((calendar, index) => {
-      const stateObj = hass.states[calendar.entity];
-      if (!stateObj || !stateObj.attributes.start_time) return;
-
-      const start = new Date(stateObj.attributes.start_time);
-      const end = new Date(stateObj.attributes.end_time);
-
-      if (start.toISOString().slice(0, 10) !== today) return;
-
-      events.push({
-        entity: calendar.entity,
-        dayOffset: 0,
-        start: start.getHours() + start.getMinutes() / 60,
-        end: end.getHours() + end.getMinutes() / 60,
-        title: stateObj.attributes.message || 'Afspraak'
-      });
-    });
-
-    this.render(events);
+    this.hass = hass;
+    this.fetchAndRender();
   }
 
   getCardSize() {
@@ -169,5 +189,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'calendar-timeline-card',
   name: 'Calendar Timeline Card',
-  description: 'Toont meerdere agenda’s in tijdlijn-dagweergave met meerdere dagen, kleuren en sticky tijdskolom'
+  description: 'Toont agenda’s in tijdlijn met pixelprecisie, meerdere dagen en kleuren.'
 });
