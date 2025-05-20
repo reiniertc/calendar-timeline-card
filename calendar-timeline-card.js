@@ -14,9 +14,9 @@ class CalendarTimelineCard extends HTMLElement {
     this.render();
   }
 
-  render() {
+  render(events = []) {
     try {
-      const shadow = this.attachShadow({ mode: 'open' });
+      const shadow = this.shadowRoot || this.attachShadow({ mode: 'open' });
       shadow.innerHTML = '';
 
       const style = document.createElement('style');
@@ -110,45 +110,14 @@ class CalendarTimelineCard extends HTMLElement {
         }
       }
 
-      const dummyEvents = [
-        {
-          entity: 'calendar.mats',
-          dayOffset: 0,
-          start: 9,
-          end: 11,
-          title: 'Overleg werk'
-        },
-        {
-          entity: 'calendar.ical_roemer',
-          dayOffset: 0,
-          start: 10,
-          end: 12,
-          title: 'Tandarts'
-        },
-        {
-          entity: 'calendar.ical_roemer',
-          dayOffset: 0,
-          start: 14,
-          end: 15,
-          title: 'Bellen met school'
-        },
-        {
-          entity: 'calendar.ical_roemer',
-          dayOffset: 1,
-          start: 8,
-          end: 9,
-          title: 'Sporten'
-        },
-      ];
-
-      dummyEvents.forEach(ev => {
+      events.forEach(ev => {
         const colIndex = this.config.calendars.findIndex(c => c.entity === ev.entity);
         if (colIndex === -1) return;
         const calendarConfig = this.config.calendars[colIndex];
+        const baseColumn = ev.dayOffset * this.config.calendars.length + colIndex;
 
         const eventEl = document.createElement('div');
         eventEl.className = 'event';
-        const baseColumn = ev.dayOffset * this.config.calendars.length + colIndex;
         eventEl.style.gridColumn = (baseColumn + 2).toString();
         eventEl.style.gridRow = `${ev.start - this.config.start_hour + 2} / ${ev.end - this.config.start_hour + 2}`;
         eventEl.style.backgroundColor = calendarConfig?.color || '#b3d1ff';
@@ -164,7 +133,29 @@ class CalendarTimelineCard extends HTMLElement {
   }
 
   set hass(hass) {
-    // later: echte kalenderdata ophalen via hass.states
+    const events = [];
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+
+    this.config.calendars.forEach((calendar, index) => {
+      const stateObj = hass.states[calendar.entity];
+      if (!stateObj || !stateObj.attributes.start_time) return;
+
+      const start = new Date(stateObj.attributes.start_time);
+      const end = new Date(stateObj.attributes.end_time);
+
+      if (start.toISOString().slice(0, 10) !== today) return;
+
+      events.push({
+        entity: calendar.entity,
+        dayOffset: 0,
+        start: start.getHours() + start.getMinutes() / 60,
+        end: end.getHours() + end.getMinutes() / 60,
+        title: stateObj.attributes.message || 'Afspraak'
+      });
+    });
+
+    this.render(events);
   }
 
   getCardSize() {
