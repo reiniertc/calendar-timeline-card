@@ -13,27 +13,27 @@ class CalendarTimelineCard extends HTMLElement {
     };
   }
 
-  connectedCallback() {
-    this.style.display = 'block';
+  set hass(hass) {
+    this._hass = hass;
     this.fetchAndRender();
   }
 
   async fetchAndRender() {
     if (!this._hass) return;
+
     const events = [];
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const start = new Date(today);
-    const end = new Date(today);
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(start);
     end.setDate(end.getDate() + this.config.days);
 
     for (const cal of this.config.calendars) {
-      const entityId = cal.entity;
       try {
-        const result = await this._hass.callApi(
-          'GET',
-          `calendars/${entityId}?start=${start.toISOString()}&end=${end.toISOString()}`
-        );
+        const entityId = cal.entity;
+        const url = `calendars/${entityId}?start=${start.toISOString()}&end=${end.toISOString()}`;
+        console.log('Fetching:', url);
+        const result = await this._hass.callApi('GET', url);
+
         result.forEach(evt => {
           const evtStart = new Date(evt.start);
           const evtEnd = new Date(evt.end);
@@ -47,7 +47,7 @@ class CalendarTimelineCard extends HTMLElement {
           });
         });
       } catch (err) {
-        console.error('Fout bij ophalen kalenderdata:', entityId, err);
+        console.error('Fout bij ophalen kalenderdata:', cal.entity, err);
       }
     }
 
@@ -78,9 +78,14 @@ class CalendarTimelineCard extends HTMLElement {
       }
       .calendars {
         flex: 1;
-        display: grid;
-        grid-template-columns: repeat(${this.config.days * this.config.calendars.length}, 1fr);
-        position: relative;
+        display: flex;
+        gap: 4px;
+      }
+      .calendar-block {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid #ccc;
       }
       .column-header {
         text-align: center;
@@ -95,7 +100,6 @@ class CalendarTimelineCard extends HTMLElement {
         border-bottom: 1px solid #ccc;
       }
       .column {
-        border-left: 1px solid #ccc;
         position: relative;
         height: ${60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px;
       }
@@ -117,7 +121,6 @@ class CalendarTimelineCard extends HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'container';
 
-    // Tijd-as
     const timeColumn = document.createElement('div');
     timeColumn.className = 'time-column';
     for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
@@ -127,7 +130,6 @@ class CalendarTimelineCard extends HTMLElement {
     }
     wrapper.appendChild(timeColumn);
 
-    // Agenda-kolommen
     const grid = document.createElement('div');
     grid.className = 'calendars';
 
@@ -136,21 +138,23 @@ class CalendarTimelineCard extends HTMLElement {
       date.setDate(date.getDate() + d);
       const dateStr = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
-      this.config.calendars.forEach((cal, i) => {
+      this.config.calendars.forEach(cal => {
+        const block = document.createElement('div');
+        block.className = 'calendar-block';
+
+        const header = document.createElement('div');
+        header.className = 'column-header';
+        header.textContent = [
+          this.config.show_date ? dateStr : '',
+          this.config.show_names ? (cal.name || cal.entity) : ''
+        ].filter(Boolean).join(' — ');
+        block.appendChild(header);
+
         const column = document.createElement('div');
         column.className = 'column';
+        block.appendChild(column);
 
-        if (this.config.show_date || this.config.show_names) {
-          const header = document.createElement('div');
-          header.className = 'column-header';
-          header.textContent = [
-            this.config.show_date ? dateStr : '',
-            this.config.show_names ? (cal.name || cal.entity) : ''
-          ].filter(Boolean).join(' — ');
-          grid.appendChild(header);
-        }
-
-        grid.appendChild(column);
+        grid.appendChild(block);
       });
     }
 
@@ -165,17 +169,12 @@ class CalendarTimelineCard extends HTMLElement {
       event.style.backgroundColor = this.config.calendars[colIndex % this.config.calendars.length]?.color || '#b3d1ff';
       event.textContent = ev.title;
 
-      const col = grid.querySelectorAll('.column')[colIndex];
+      const col = grid.querySelectorAll('.calendar-block .column')[colIndex];
       if (col) col.appendChild(event);
     });
 
     wrapper.appendChild(grid);
     shadow.appendChild(wrapper);
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this.fetchAndRender();
   }
 
   getCardSize() {
