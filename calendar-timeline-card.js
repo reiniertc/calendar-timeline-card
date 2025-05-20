@@ -89,67 +89,31 @@ class CalendarTimelineCard extends HTMLElement {
       }
     }
 
-    // Dummy data
+    // Dummy data met echte entity-namen
     const dummyEvents = [
       {
-        entity: 0,
+        entity: 'calendar.mats',
         dayOffset: 0,
         start: 9,
         end: 11,
         title: 'Overleg werk'
       },
       {
-        entity: 1,
+        entity: 'calendar.ical_roemer',
         dayOffset: 0,
         start: 10,
         end: 12,
         title: 'Tandarts'
       },
       {
-        entity: 2,
+        entity: 'calendar.ical_roemer',
         dayOffset: 0,
         start: 14,
         end: 15,
         title: 'Bellen met school'
       },
       {
-        entity: 1,
+        entity: 'calendar.ical_roemer',
         dayOffset: 1,
         start: 8,
         end: 9,
-        title: 'Sporten'
-      },
-    ];
-
-    dummyEvents.forEach(ev => {
-      const eventEl = document.createElement('div');
-      eventEl.className = 'event';
-      const baseColumn = ev.dayOffset * this.config.calendars.length + ev.entity;
-      eventEl.style.gridColumn = (baseColumn + 2).toString();
-      eventEl.style.gridRow = `${ev.start - this.config.start_hour + 2} / ${ev.end - this.config.start_hour + 2}`;
-      eventEl.style.backgroundColor = this.config.calendars[ev.entity].color || '#b3d1ff';
-      eventEl.textContent = ev.title;
-      container.appendChild(eventEl);
-    });
-
-    shadow.appendChild(container);
-  }
-
-  set hass(hass) {
-    // Placeholder: in de toekomst echte kalenderdata ophalen
-  }
-
-  getCardSize() {
-    return 12;
-  }
-}
-
-customElements.define('calendar-timeline-card', CalendarTimelineCard);
-
-// Voor Home Assistant
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'calendar-timeline-card',
-  name: 'Calendar Timeline Card',
-  description: 'Toont meerdere agenda’s in tijdlijn-dagweergave met meerdere dagen, kleuren en sticky tijdskolom'
-});
