@@ -18,37 +18,57 @@ class CalendarTimelineCard extends HTMLElement {
 
     const style = document.createElement('style');
     style.textContent = `
+      :host {
+        all: initial;
+      }
       .timeline {
         display: grid;
         grid-template-columns: 80px repeat(${this.config.calendars.length * this.config.days}, 1fr);
         grid-auto-rows: 40px;
-        font-family: sans-serif;
+        font-family: var(--primary-font-family, sans-serif);
+        background: var(--card-background-color, #fff);
+      }
+      .timeline > div {
+        box-sizing: border-box;
+        height: 40px;
+        display: flex;
+        align-items: center;
       }
       .time {
         text-align: right;
         padding-right: 8px;
         border-bottom: 1px solid #ddd;
         font-size: 12px;
-        background: #fff;
+        background: var(--card-background-color, #fff);
         position: sticky;
         left: 0;
         z-index: 2;
+        height: 40px;
+        line-height: 40px;
       }
       .event {
         border: 1px solid #999;
         margin: 2px;
-        padding: 2px;
+        padding: 4px;
         font-size: 12px;
         color: #000;
+        display: flex;
+        align-items: center;
+        background-color: #b3d1ff;
       }
       .column {
         border-left: 1px solid #ccc;
+        height: 40px;
       }
       .header {
         font-weight: bold;
         font-size: 12px;
         text-align: center;
         border-bottom: 1px solid #ccc;
+        background: var(--card-background-color, #fff);
+        position: sticky;
+        top: 0;
+        z-index: 3;
       }
     `;
     shadow.appendChild(style);
