@@ -1,4 +1,3 @@
-// calendar-timeline-card.js met summary-ondersteuning en font-size optie
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -7,6 +6,8 @@ class CalendarTimelineCard extends HTMLElement {
       end_hour: 20,
       pixel_per_minute: 1,
       font_size: 1.0,
+      border_width: 0,
+      border_radius: 4,
       show_date: true,
       show_names: true,
       show_start_time: true,
@@ -28,10 +29,10 @@ class CalendarTimelineCard extends HTMLElement {
     const end = new Date(start);
     end.setDate(end.getDate() + this.config.days);
 
-    this.config.calendars.forEach((cal, index) => {
+    this.config.calendars.forEach(cal => {
       const prefix = cal.prefix || '';
       Object.keys(this._hass.states).forEach(id => {
-        if (prefix && id.startsWith(prefix)) {
+        if (id.startsWith(prefix)) {
           const state = this._hass.states[id];
           const attrs = state.attributes;
           if (!attrs.start || !attrs.end) return;
@@ -74,6 +75,7 @@ class CalendarTimelineCard extends HTMLElement {
       }
       .container {
         display: flex;
+        margin-top: 30px;
       }
       .time-column {
         width: 60px;
@@ -102,10 +104,8 @@ class CalendarTimelineCard extends HTMLElement {
         height: 30px;
         line-height: 30px;
         background: var(--card-background-color);
-        position: sticky;
-        top: 0;
-        z-index: 2;
         border-bottom: 1px solid #ccc;
+        margin-bottom: 4px;
       }
       .column {
         position: relative;
@@ -117,13 +117,16 @@ class CalendarTimelineCard extends HTMLElement {
         right: 2px;
         font-size: ${this.config.font_size}em;
         padding: 4px;
-        border-radius: 4px;
+        border-radius: ${this.config.border_radius}px;
+        border: ${this.config.border_width}px solid rgba(0, 0, 0, 0.3);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: normal;
         color: black;
         background-color: #b3d1ff;
         line-height: 1.2;
+        background-clip: padding-box;
+        box-sizing: border-box;
       }
     `;
     shadow.appendChild(style);
@@ -169,7 +172,8 @@ class CalendarTimelineCard extends HTMLElement {
     }
 
     events.forEach(ev => {
-      const colIndex = ev.dayOffset * this.config.calendars.length + this.config.calendars.findIndex(c => c.name === ev.name);
+      const colIndex = ev.dayOffset * this.config.calendars.length +
+        this.config.calendars.findIndex(c => c.name === ev.name);
       if (colIndex < 0) return;
 
       const event = document.createElement('div');
