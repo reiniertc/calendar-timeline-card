@@ -1,7 +1,11 @@
 {
   "name": "Calendar Timeline Card",
-  "content_in_root": true,
   "filename": "calendar-timeline-card.js",
-  "type": "lovelace",
-  "render_readme": true
+  "type": "module",
+  "render_readme": true,
+  "description": "Display multiple calendars as pixel-precise vertical timelines, inspired by Apple Calendar. Includes full GUI editor.",
+  "visibility": "public",
+  "authors": ["@reiniertc"],
+  "keywords": ["calendar", "timeline", "ical", "sensor", "ha-form", "lovelace"],
+  "version": "1.0.0"
 }
