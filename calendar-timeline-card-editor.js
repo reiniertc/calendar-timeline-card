@@ -1,4 +1,3 @@
-// calendar-timeline-card-editor.js
 class CalendarTimelineCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = config;
@@ -28,11 +27,10 @@ class CalendarTimelineCardEditor extends HTMLElement {
           schema: [
             { name: 'name', required: true, selector: { text: {} } },
             { name: 'color', required: true, selector: { color: {} } },
-            { name: 'prefix', required: true, selector: { text: {} } },
+            { name: 'prefix', required: true, selector: { text: {} } }
           ]
         }
       ];
-
       form.data = this._config || {};
       form.addEventListener('value-changed', (ev) => {
         ev.stopPropagation();
