@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met border_color en show_hour_lines
+// calendar-timeline-card.js met themavriendelijke kleuren en fonts
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -52,8 +52,8 @@ class CalendarTimelineCard extends HTMLElement {
             startMinutes: startDate.getHours() * 60 + startDate.getMinutes(),
             endMinutes: endDate.getHours() * 60 + endDate.getMinutes(),
             title: attrs.summary || attrs.message || id,
-            color: cal.color || '#b3d1ff',
-            borderColor: cal.border_color || 'rgba(0,0,0,0.3)',
+            color: cal.color || 'var(--accent-color)',
+            borderColor: cal.border_color || 'var(--divider-color)',
             startTime: startDate,
             endTime: endDate
           });
@@ -77,6 +77,7 @@ class CalendarTimelineCard extends HTMLElement {
       :host {
         all: initial;
         font-family: var(--primary-font-family, sans-serif);
+        color: var(--primary-text-color);
       }
       .container {
         display: flex;
@@ -86,7 +87,8 @@ class CalendarTimelineCard extends HTMLElement {
         width: 60px;
         padding-right: 5px;
         text-align: right;
-        font-size: 12px;
+        font-size: var(--body-font-size, 12px);
+        color: var(--secondary-text-color);
         position: relative;
       }
       .time-column div {
@@ -101,17 +103,18 @@ class CalendarTimelineCard extends HTMLElement {
         flex: 1;
         display: flex;
         flex-direction: column;
-        border-left: 1px solid #ccc;
+        border-left: 1px solid var(--divider-color);
       }
       .column-header {
         text-align: center;
-        font-size: 12px;
+        font-size: var(--body-font-size, 12px);
         font-weight: bold;
         height: 30px;
         line-height: 30px;
         background: var(--card-background-color);
-        border-bottom: 1px solid #ccc;
+        border-bottom: 1px solid var(--divider-color);
         margin-bottom: 4px;
+        color: var(--primary-text-color);
       }
       .column {
         position: relative;
@@ -121,7 +124,7 @@ class CalendarTimelineCard extends HTMLElement {
         position: absolute;
         left: 0;
         right: 0;
-        border-top: 1px dashed #ccc;
+        border-top: 1px dashed var(--divider-color);
         pointer-events: none;
       }
       .event {
@@ -136,8 +139,7 @@ class CalendarTimelineCard extends HTMLElement {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: normal;
-        color: black;
-        background-color: #b3d1ff;
+        background-color: var(--accent-color);
         line-height: 1.2;
         background-clip: padding-box;
         box-sizing: border-box;
