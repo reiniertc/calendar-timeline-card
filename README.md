@@ -50,14 +50,14 @@ show_start_time: true
 show_end_time: true
 show_hour_lines: true
 calendars:
-  - name: Mats
+  - name: Henk
     color: 'var(--accent-color)'
     border_color: 'var(--primary-color)'
-    prefix: sensor.ical_mats_event_
-  - name: Roemer
+    prefix: sensor.ical_henk_event_
+  - name: Marie
     color: '#64b5f6'
     border_color: '#1976d2'
-    prefix: sensor.ical_roemer_event_
+    prefix: sensor.ical_marie_event_
 ```
 
 ---
