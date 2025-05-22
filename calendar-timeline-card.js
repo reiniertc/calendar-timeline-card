@@ -1,4 +1,3 @@
-// (volledige JavaScript-code zoals eerder gegenereerd)
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -244,7 +243,7 @@ class CalendarTimelineCard extends HTMLElement {
         group.forEach(ev => {
           const event = document.createElement('div');
           event.className = 'event';
-          event.style.top = `${(ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
+          event.style.top = `${allDayOffsetPx + (ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
           event.style.height = `${(ev.endMinutes - ev.startMinutes) * this.config.pixel_per_minute}px`;
           event.style.left = `${(index / arr.length) * 100}%`;
           event.style.width = `${100 / arr.length}%`;
