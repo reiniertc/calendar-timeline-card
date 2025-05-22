@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met optie voor fontsize van de uren
+// calendar-timeline-card.js met overlapdetectie over meerdere agenda's
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -100,7 +100,7 @@ class CalendarTimelineCard extends HTMLElement {
         display: flex;
         gap: 4px;
       }
-      .calendar-block {
+      .calendar-day {
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -130,8 +130,6 @@ class CalendarTimelineCard extends HTMLElement {
       }
       .event {
         position: absolute;
-        left: 2px;
-        right: 2px;
         font-size: ${this.config.font_size}em;
         padding: 4px;
         border-radius: ${this.config.border_radius}px;
@@ -164,60 +162,72 @@ class CalendarTimelineCard extends HTMLElement {
     grid.className = 'calendars';
 
     for (let d = 0; d < this.config.days; d++) {
-      const date = new Date();
-      date.setDate(date.getDate() + d + (this.config.offset || 0));
-      const dateStr = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+      const dayDate = new Date();
+      dayDate.setDate(dayDate.getDate() + d + (this.config.offset || 0));
+      const dateStr = dayDate.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
-      this.config.calendars.forEach(cal => {
-        const block = document.createElement('div');
-        block.className = 'calendar-block';
+      const block = document.createElement('div');
+      block.className = 'calendar-day';
 
-        const header = document.createElement('div');
-        header.className = 'column-header';
-        header.textContent = [
-          this.config.show_date ? dateStr : '',
-          this.config.show_names ? (cal.name || '') : ''
-        ].filter(Boolean).join(' — ');
-        block.appendChild(header);
+      const header = document.createElement('div');
+      header.className = 'column-header';
+      header.textContent = this.config.show_date ? dateStr : '';
+      block.appendChild(header);
 
-        const column = document.createElement('div');
-        column.className = 'column';
+      const column = document.createElement('div');
+      column.className = 'column';
 
-        if (this.config.show_hour_lines) {
-          for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
-            const line = document.createElement('div');
-            line.className = 'hour-line';
-            line.style.top = `${(h - this.config.start_hour) * 60 * this.config.pixel_per_minute}px`;
-            column.appendChild(line);
+      if (this.config.show_hour_lines) {
+        for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
+          const line = document.createElement('div');
+          line.className = 'hour-line';
+          line.style.top = `${(h - this.config.start_hour) * 60 * this.config.pixel_per_minute}px`;
+          column.appendChild(line);
+        }
+      }
+
+      // Filter en sorteer events van deze dag
+      const dayEvents = events.filter(e => e.dayOffset === d).sort((a, b) => a.startMinutes - b.startMinutes);
+
+      // Overlapberekening
+      const slots = [];
+      dayEvents.forEach(ev => {
+        let placed = false;
+        for (const slot of slots) {
+          if (!slot.some(e => !(ev.endMinutes <= e.startMinutes || ev.startMinutes >= e.endMinutes))) {
+            slot.push(ev);
+            placed = true;
+            break;
           }
         }
-
-        block.appendChild(column);
-        grid.appendChild(block);
+        if (!placed) slots.push([ev]);
       });
+
+      // Plaats afspraken in slots (kolommen)
+      slots.forEach((group, index, arr) => {
+        group.forEach(ev => {
+          const event = document.createElement('div');
+          event.className = 'event';
+          event.style.top = `${(ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
+          event.style.height = `${(ev.endMinutes - ev.startMinutes) * this.config.pixel_per_minute}px`;
+          event.style.left = `${(index / arr.length) * 100}%`;
+          event.style.width = `${100 / arr.length}%`;
+          event.style.backgroundColor = ev.color;
+          event.style.borderColor = ev.borderColor;
+
+          const start = this.config.show_start_time ? this.formatTime(ev.startTime) : '';
+          const end = this.config.show_end_time ? this.formatTime(ev.endTime) : '';
+          const timeRange = [start, end].filter(Boolean).join(' – ');
+
+          event.innerHTML = `<div>${ev.title}</div>${timeRange ? `<div><small>${timeRange}</small></div>` : ''}`;
+
+          column.appendChild(event);
+        });
+      });
+
+      block.appendChild(column);
+      grid.appendChild(block);
     }
-
-    events.forEach(ev => {
-      const colIndex = ev.dayOffset * this.config.calendars.length +
-        this.config.calendars.findIndex(c => c.name === ev.name);
-      if (colIndex < 0) return;
-
-      const event = document.createElement('div');
-      event.className = 'event';
-      event.style.top = `${(ev.startMinutes - this.config.start_hour * 60) * this.config.pixel_per_minute}px`;
-      event.style.height = `${(ev.endMinutes - ev.startMinutes) * this.config.pixel_per_minute}px`;
-      event.style.backgroundColor = ev.color;
-      event.style.borderColor = ev.borderColor;
-
-      const start = this.config.show_start_time ? this.formatTime(ev.startTime) : '';
-      const end = this.config.show_end_time ? this.formatTime(ev.endTime) : '';
-      const timeRange = [start, end].filter(Boolean).join(' – ');
-
-      event.innerHTML = `<div>${ev.title}</div>${timeRange ? `<div><small>${timeRange}</small></div>` : ''}`;
-
-      const col = grid.querySelectorAll('.calendar-block .column')[colIndex];
-      if (col) col.appendChild(event);
-    });
 
     wrapper.appendChild(grid);
     shadow.appendChild(wrapper);
