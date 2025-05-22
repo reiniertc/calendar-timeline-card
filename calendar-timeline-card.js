@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met ondersteuning voor all-day afspraken bovenaan
+// calendar-timeline-card.js met datumformat, datumgrootte, betere tijdlijnuitlijning en all-day bovenaan
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -9,6 +9,8 @@ class CalendarTimelineCard extends HTMLElement {
       pixel_per_minute: 1,
       font_size: 1.0,
       hour_font_size: '12px',
+      date_font_size: '14px',
+      date_format: { weekday: 'short', day: 'numeric', month: 'short' },
       border_width: 0,
       border_radius: 4,
       show_date: true,
@@ -86,7 +88,7 @@ class CalendarTimelineCard extends HTMLElement {
       }
       .container {
         display: flex;
-        margin-top: 30px;
+        margin-top: 0;
       }
       .time-column {
         width: 60px;
@@ -95,6 +97,7 @@ class CalendarTimelineCard extends HTMLElement {
         font-size: ${this.config.hour_font_size};
         color: var(--secondary-text-color);
         position: relative;
+        margin-top: 60px;
       }
       .time-column div {
         height: ${60 * this.config.pixel_per_minute}px;
@@ -112,24 +115,26 @@ class CalendarTimelineCard extends HTMLElement {
       }
       .column-header {
         text-align: center;
-        font-size: var(--body-font-size, 12px);
+        font-size: ${this.config.date_font_size};
         font-weight: bold;
         height: 30px;
         line-height: 30px;
         background: var(--card-background-color);
         border-bottom: 1px solid var(--divider-color);
-        margin-bottom: 4px;
         color: var(--primary-text-color);
-      }
-      .column {
-        position: relative;
-        height: ${60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px;
       }
       .allday {
         display: flex;
         flex-direction: column;
         padding: 2px;
         gap: 2px;
+        background-color: var(--card-background-color);
+        min-height: 32px;
+      }
+      .column {
+        position: relative;
+        margin-top: 0;
+        height: ${60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px;
       }
       .hour-line {
         position: absolute;
@@ -181,7 +186,7 @@ class CalendarTimelineCard extends HTMLElement {
     for (let d = 0; d < this.config.days; d++) {
       const dayDate = new Date();
       dayDate.setDate(dayDate.getDate() + d + (this.config.offset || 0));
-      const dateStr = dayDate.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+      const dateStr = new Intl.DateTimeFormat(undefined, this.config.date_format).format(dayDate);
 
       const block = document.createElement('div');
       block.className = 'calendar-day';
