@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met dynamische ruimte voor meerdere all-day afspraken
+// (volledige JavaScript-code zoals eerder gegenereerd)
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -18,7 +18,7 @@ class CalendarTimelineCard extends HTMLElement {
       show_start_time: true,
       show_end_time: false,
       show_hour_lines: false,
-      showalldayevents: false,
+      showalldayevents: true,
       calendars: [],
       ...config,
     };
@@ -50,7 +50,8 @@ class CalendarTimelineCard extends HTMLElement {
           if (endDate < start || startDate > end) return;
 
           const dayOffset = Math.floor((startDate - start) / (24 * 60 * 60 * 1000));
-          const isAllDay = startDate.getHours() === 0 && startDate.getMinutes() === 0 && endDate.getHours() === 0 && endDate.getMinutes() === 0;
+          const isAllDay = startDate.getHours() === 0 && startDate.getMinutes() === 0 &&
+                           endDate.getHours() === 0 && endDate.getMinutes() === 0;
 
           events.push({
             name: cal.name,
@@ -79,6 +80,12 @@ class CalendarTimelineCard extends HTMLElement {
     const shadow = this.shadowRoot || this.attachShadow({ mode: 'open' });
     shadow.innerHTML = '';
 
+    const maxAllDay = Array.from({ length: this.config.days }, (_, d) =>
+      events.filter(e => e.dayOffset === d && e.isAllDay).length
+    );
+    const maxAllDayCount = Math.max(...maxAllDay, 0);
+    const allDayOffsetPx = maxAllDayCount * 34;
+
     const style = document.createElement('style');
     style.textContent = `
       :host {
@@ -88,7 +95,6 @@ class CalendarTimelineCard extends HTMLElement {
       }
       .container {
         display: flex;
-        margin-top: 0;
       }
       .time-column {
         width: 60px;
@@ -97,6 +103,7 @@ class CalendarTimelineCard extends HTMLElement {
         font-size: ${this.config.hour_font_size};
         color: var(--secondary-text-color);
         position: relative;
+        margin-top: ${allDayOffsetPx + 30}px;
       }
       .time-column div {
         height: ${60 * this.config.pixel_per_minute}px;
@@ -131,6 +138,8 @@ class CalendarTimelineCard extends HTMLElement {
       }
       .column {
         position: relative;
+        margin-top: ${allDayOffsetPx}px;
+        height: ${60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px;
       }
       .hour-line {
         position: absolute;
@@ -168,14 +177,20 @@ class CalendarTimelineCard extends HTMLElement {
 
     const timeColumn = document.createElement('div');
     timeColumn.className = 'time-column';
+    for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
+      const div = document.createElement('div');
+      div.textContent = `${h}:00`;
+      timeColumn.appendChild(div);
+    }
+    wrapper.appendChild(timeColumn);
 
     const grid = document.createElement('div');
     grid.className = 'calendars';
 
     for (let d = 0; d < this.config.days; d++) {
-      const dayDate = new Date();
-      dayDate.setDate(dayDate.getDate() + d + (this.config.offset || 0));
-      const dateStr = new Intl.DateTimeFormat(undefined, this.config.date_format).format(dayDate);
+      const date = new Date();
+      date.setDate(date.getDate() + d + (this.config.offset || 0));
+      const dateStr = new Intl.DateTimeFormat(undefined, this.config.date_format).format(date);
 
       const block = document.createElement('div');
       block.className = 'calendar-day';
@@ -187,8 +202,6 @@ class CalendarTimelineCard extends HTMLElement {
 
       const allday = document.createElement('div');
       allday.className = 'allday';
-      let allDayCount = 0;
-
       if (this.config.showalldayevents) {
         events.filter(e => e.dayOffset === d && e.isAllDay).forEach(ev => {
           const e = document.createElement('div');
@@ -197,29 +210,20 @@ class CalendarTimelineCard extends HTMLElement {
           e.style.borderColor = ev.borderColor;
           e.innerHTML = `<div>${ev.title}</div>`;
           allday.appendChild(e);
-          allDayCount++;
         });
       }
       block.appendChild(allday);
 
       const column = document.createElement('div');
       column.className = 'column';
-      const offsetY = allDayCount * 32;
-      column.style.height = `${offsetY + 60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px`;
-      column.style.marginTop = `${offsetY}px`;
 
-      for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
-        if (this.config.show_hour_lines) {
+      if (this.config.show_hour_lines) {
+        for (let h = this.config.start_hour; h <= this.config.end_hour; h++) {
           const line = document.createElement('div');
           line.className = 'hour-line';
           line.style.top = `${(h - this.config.start_hour) * 60 * this.config.pixel_per_minute}px`;
           column.appendChild(line);
         }
-
-        const hourLabel = document.createElement('div');
-        hourLabel.textContent = `${h}:00`;
-        hourLabel.style.height = `${60 * this.config.pixel_per_minute}px`;
-        timeColumn.appendChild(hourLabel);
       }
 
       const dayEvents = events.filter(e => e.dayOffset === d && !e.isAllDay).sort((a, b) => a.startMinutes - b.startMinutes);
@@ -260,7 +264,6 @@ class CalendarTimelineCard extends HTMLElement {
       grid.appendChild(block);
     }
 
-    wrapper.appendChild(timeColumn);
     wrapper.appendChild(grid);
     shadow.appendChild(wrapper);
   }
