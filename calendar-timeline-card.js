@@ -1,4 +1,4 @@
-// calendar-timeline-card.js met overlapdetectie over meerdere agenda's
+// calendar-timeline-card.js met ondersteuning voor all-day afspraken bovenaan
 class CalendarTimelineCard extends HTMLElement {
   setConfig(config) {
     this.config = {
@@ -16,6 +16,7 @@ class CalendarTimelineCard extends HTMLElement {
       show_start_time: true,
       show_end_time: false,
       show_hour_lines: false,
+      showalldayevents: false,
       calendars: [],
       ...config,
     };
@@ -47,9 +48,12 @@ class CalendarTimelineCard extends HTMLElement {
           if (endDate < start || startDate > end) return;
 
           const dayOffset = Math.floor((startDate - start) / (24 * 60 * 60 * 1000));
+          const isAllDay = startDate.getHours() === 0 && startDate.getMinutes() === 0 && endDate.getHours() === 0 && endDate.getMinutes() === 0;
+
           events.push({
             name: cal.name,
             dayOffset,
+            isAllDay,
             startMinutes: startDate.getHours() * 60 + startDate.getMinutes(),
             endMinutes: endDate.getHours() * 60 + endDate.getMinutes(),
             title: attrs.summary || attrs.message || id,
@@ -121,6 +125,12 @@ class CalendarTimelineCard extends HTMLElement {
         position: relative;
         height: ${60 * this.config.pixel_per_minute * (this.config.end_hour - this.config.start_hour)}px;
       }
+      .allday {
+        display: flex;
+        flex-direction: column;
+        padding: 2px;
+        gap: 2px;
+      }
       .hour-line {
         position: absolute;
         left: 0;
@@ -142,6 +152,13 @@ class CalendarTimelineCard extends HTMLElement {
         line-height: 1.2;
         background-clip: padding-box;
         box-sizing: border-box;
+      }
+      .event.allday {
+        position: relative;
+        top: 0;
+        height: 30px;
+        left: 2px;
+        right: 2px;
       }
     `;
     shadow.appendChild(style);
@@ -174,6 +191,20 @@ class CalendarTimelineCard extends HTMLElement {
       header.textContent = this.config.show_date ? dateStr : '';
       block.appendChild(header);
 
+      const allday = document.createElement('div');
+      allday.className = 'allday';
+      if (this.config.showalldayevents) {
+        events.filter(e => e.dayOffset === d && e.isAllDay).forEach(ev => {
+          const e = document.createElement('div');
+          e.className = 'event allday';
+          e.style.backgroundColor = ev.color;
+          e.style.borderColor = ev.borderColor;
+          e.innerHTML = `<div>${ev.title}</div>`;
+          allday.appendChild(e);
+        });
+      }
+      block.appendChild(allday);
+
       const column = document.createElement('div');
       column.className = 'column';
 
@@ -186,10 +217,8 @@ class CalendarTimelineCard extends HTMLElement {
         }
       }
 
-      // Filter en sorteer events van deze dag
-      const dayEvents = events.filter(e => e.dayOffset === d).sort((a, b) => a.startMinutes - b.startMinutes);
+      const dayEvents = events.filter(e => e.dayOffset === d && !e.isAllDay).sort((a, b) => a.startMinutes - b.startMinutes);
 
-      // Overlapberekening
       const slots = [];
       dayEvents.forEach(ev => {
         let placed = false;
@@ -203,7 +232,6 @@ class CalendarTimelineCard extends HTMLElement {
         if (!placed) slots.push([ev]);
       });
 
-      // Plaats afspraken in slots (kolommen)
       slots.forEach((group, index, arr) => {
         group.forEach(ev => {
           const event = document.createElement('div');
@@ -220,7 +248,6 @@ class CalendarTimelineCard extends HTMLElement {
           const timeRange = [start, end].filter(Boolean).join(' – ');
 
           event.innerHTML = `<div>${ev.title}</div>${timeRange ? `<div><small>${timeRange}</small></div>` : ''}`;
-
           column.appendChild(event);
         });
       });
